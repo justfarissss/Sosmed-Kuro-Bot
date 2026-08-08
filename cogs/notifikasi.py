@@ -7,11 +7,14 @@ class Notifikasi(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.channel_notif_id = 1535503408331620355 
-        
-        # ID Channel YouTube kamu yang sudah benar
         self.yt_channel_id = 'UCODLE_vcAUAquA4u0UKegBQ' 
-        
         self.last_yt_video_id = None 
+        
+        # Identitas palsu agar tidak diblokir YouTube
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        
         self.cek_sosmed.start()
 
     def cog_unload(self):
@@ -22,16 +25,14 @@ class Notifikasi(commands.Cog):
         self.channel_notif_id = ctx.channel.id
         await ctx.send(f'✅ Channel notifikasi sementara dipindahkan ke {ctx.channel.mention}.')
 
-    # ==========================================
-    # COMMAND BARU UNTUK TESTING MANUAL
-    # ==========================================
     @commands.command()
     async def testyt(self, ctx):
-        await ctx.send("⏳ Sedang menarik data paksa dari YouTube...")
+        await ctx.send("⏳ Sedang menarik data paksa dari YouTube dengan mode penyamaran...")
         yt_rss_url = f'https://www.youtube.com/feeds/videos.xml?channel_id={self.yt_channel_id}'
         
         try:
-            async with aiohttp.ClientSession() as session:
+            # Memasukkan headers penyamaran ke dalam request
+            async with aiohttp.ClientSession(headers=self.headers) as session:
                 async with session.get(yt_rss_url) as respon:
                     if respon.status == 200:
                         teks_xml = await respon.text()
@@ -45,31 +46,28 @@ class Notifikasi(commands.Cog):
                             
                             pesan = (
                                 f"✅ **KONEKSI BERHASIL!**\n"
-                                f"Bot berhasil membaca channel YouTube kamu.\n"
-                                f"Video teratas yang terdeteksi saat ini:\n**{video_title}**\n{video_url}"
+                                f"YouTube mengizinkan akses. Video teratas:\n**{video_title}**\n{video_url}"
                             )
                             await ctx.send(pesan)
                         else:
-                            await ctx.send("⚠️ Terkoneksi ke YouTube, tapi tidak ada video publik yang ditemukan.")
+                            await ctx.send("⚠️ Terkoneksi, tapi tidak ada video publik di RSS feed.")
                     else:
-                        await ctx.send(f"❌ Gagal koneksi ke YouTube. Error Code: {respon.status}")
+                        await ctx.send(f"❌ YouTube masih menolak. Error Code: {respon.status}")
         except Exception as e:
             await ctx.send(f"❌ Terjadi error pada sistem: {e}")
 
-    # ==========================================
-    # LOGIKA PENGECEKAN OTOMATIS (BACKGROUND)
-    # ==========================================
     @tasks.loop(minutes=10)
     async def cek_sosmed(self):
         channel = self.bot.get_channel(self.channel_notif_id)
         if not channel:
             return
 
-        print("Mengecek aktivitas sosmed terbaru...")
+        print("Mengecek aktivitas YouTube...")
         yt_rss_url = f'https://www.youtube.com/feeds/videos.xml?channel_id={self.yt_channel_id}'
         
         try:
-            async with aiohttp.ClientSession() as session:
+            # Memasukkan headers penyamaran ke background task
+            async with aiohttp.ClientSession(headers=self.headers) as session:
                 async with session.get(yt_rss_url) as respon:
                     if respon.status == 200:
                         teks_xml = await respon.text()
@@ -86,7 +84,6 @@ class Notifikasi(commands.Cog):
                             if self.last_yt_video_id is None:
                                 self.last_yt_video_id = video_id
                                 print(f"Menyimpan video terakhir: {video_title}")
-                            
                             elif self.last_yt_video_id != video_id:
                                 self.last_yt_video_id = video_id
                                 pesan = (
@@ -95,7 +92,6 @@ class Notifikasi(commands.Cog):
                                     f"Yuk tonton di sini: {video_url}"
                                 )
                                 await channel.send(pesan)
-                                print(f"Notifikasi terkirim: {video_title}")
         except Exception as e:
             print(f"Gagal mengecek YouTube: {e}")
 
