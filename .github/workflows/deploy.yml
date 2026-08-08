@@ -8,6 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+    # Baris ini ditambahkan agar GitHub mengambil secret dari environment '.env'
+    environment: .env 
 
     steps:
     - name: 📥 Tarik Kode Terbaru
