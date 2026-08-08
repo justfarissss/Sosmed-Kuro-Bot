@@ -1,0 +1,23 @@
+name: Deploy Bot CI/CD
+
+on:
+  push:
+    branches:
+      - main  # Ubah menjadi 'master' jika default branch repo kamu bernama master
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: 📥 Tarik Kode Terbaru
+      uses: actions/checkout@v4
+
+    - name: 🔐 Buat ulang file .env
+      run: |
+        echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+        echo "PREFIX=${{ secrets.PREFIX }}" >> .env
+
+    - name: 🚀 Build & Restart Docker Container
+      run: |
+        docker compose up -d --build
