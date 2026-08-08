@@ -9,7 +9,7 @@ class Notifikasi(commands.Cog):
         self.channel_notif_id = 1535503408331620355 
         
         # GANTI DENGAN ID CHANNEL YOUTUBE KAMU
-        self.yt_channel_id = '@just.farissss' 
+        self.yt_channel_id = 'UCODLE_vcAUAquA4u0UKegBQ' 
         
         # Memori untuk menyimpan ID video terakhir agar tidak spam
         self.last_yt_video_id = None 
