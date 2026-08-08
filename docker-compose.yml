@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  kuro_bot:
+    build: .
+    container_name: sosmed_kuro_bot
+    restart: unless-stopped
+    env_file:
+      - .env
