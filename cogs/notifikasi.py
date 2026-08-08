@@ -8,12 +8,10 @@ class Notifikasi(commands.Cog):
         self.bot = bot
         self.channel_notif_id = 1535503408331620355 
         
-        # GANTI DENGAN ID CHANNEL YOUTUBE KAMU
+        # ID Channel YouTube kamu yang sudah benar
         self.yt_channel_id = 'UCODLE_vcAUAquA4u0UKegBQ' 
         
-        # Memori untuk menyimpan ID video terakhir agar tidak spam
         self.last_yt_video_id = None 
-        
         self.cek_sosmed.start()
 
     def cog_unload(self):
@@ -52,15 +50,54 @@ class Notifikasi(commands.Cog):
                             )
                             await ctx.send(pesan)
                         else:
-                            await ctx.send("⚠️ Terkoneksi ke YouTube, tapi tidak ada video publik yang ditemukan di RSS feed.")
+                            await ctx.send("⚠️ Terkoneksi ke YouTube, tapi tidak ada video publik yang ditemukan.")
                     else:
                         await ctx.send(f"❌ Gagal koneksi ke YouTube. Error Code: {respon.status}")
         except Exception as e:
             await ctx.send(f"❌ Terjadi error pada sistem: {e}")
 
-        # ==========================================
-        # 2. LOGIKA PENGECEKAN TIKTOK (Menyusul)
-        # ==========================================
+    # ==========================================
+    # LOGIKA PENGECEKAN OTOMATIS (BACKGROUND)
+    # ==========================================
+    @tasks.loop(minutes=10)
+    async def cek_sosmed(self):
+        channel = self.bot.get_channel(self.channel_notif_id)
+        if not channel:
+            return
+
+        print("Mengecek aktivitas sosmed terbaru...")
+        yt_rss_url = f'https://www.youtube.com/feeds/videos.xml?channel_id={self.yt_channel_id}'
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(yt_rss_url) as respon:
+                    if respon.status == 200:
+                        teks_xml = await respon.text()
+                        root = ET.fromstring(teks_xml)
+                        
+                        ns = {'yt': 'http://www.w3.org/2005/Atom', 'yt_ext': 'http://www.youtube.com/xml/schemas/2015'}
+                        video_terbaru = root.find('yt:entry', ns)
+                        
+                        if video_terbaru is not None:
+                            video_id = video_terbaru.find('yt:id', ns).text
+                            video_title = video_terbaru.find('yt:title', ns).text
+                            video_url = video_terbaru.find('yt:link', ns).attrib['href']
+                            
+                            if self.last_yt_video_id is None:
+                                self.last_yt_video_id = video_id
+                                print(f"Menyimpan video terakhir: {video_title}")
+                            
+                            elif self.last_yt_video_id != video_id:
+                                self.last_yt_video_id = video_id
+                                pesan = (
+                                    f"📢 **Postingan YouTube Baru!** 📢\n\n"
+                                    f"**{video_title}**\n"
+                                    f"Yuk tonton di sini: {video_url}"
+                                )
+                                await channel.send(pesan)
+                                print(f"Notifikasi terkirim: {video_title}")
+        except Exception as e:
+            print(f"Gagal mengecek YouTube: {e}")
 
     @cek_sosmed.before_loop
     async def before_cek(self):
